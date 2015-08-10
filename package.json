@@ -1,0 +1,21 @@
+{
+  "name": "electro-panel",
+  "description": "Panel app using Electron",
+  "version": "0.0.0",
+  "license": "MIT",
+  "main": "init.js",
+  "author": "Raymond Hammarling",
+  "scripts": {
+    "lint": "eslint init.js main.js",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "babel-eslint": "^4.0.5",
+    "eslint": "^1.1.0",
+    "eslint-config-kellyirc": "^2.0.0"
+  },
+  "dependencies": {
+    "babel": "^5.8.21",
+    "electron-prebuilt": "^0.30.4"
+  }
+}
