@@ -13,7 +13,17 @@ app.on('window-all-closed', function() {
 });
 
 app.on('ready', () => {
-    mainWindow = new BrowserWindow({ width: 800, height: 600 });
+    const screen = require('screen');
+
+    console.log(screen.getPrimaryDisplay());
+
+    const display = screen.getPrimaryDisplay();
+
+    mainWindow = new BrowserWindow({
+        x: display.workArea.x,
+        width: display.workArea.width, height: 300,
+        frame: true
+    });
 
     mainWindow.loadUrl(`file://${__dirname}/app/index.html`);
 

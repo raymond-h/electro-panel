@@ -3,6 +3,15 @@
     <head>
         <meta charset="UTF-8">
         <title>Hello world!</title>
+        <link rel="stylesheet" href="index.css">
+        <script>
+            var domready = require('domready');
+
+            domready(function() {
+                require('babel/register');
+                require('./index.js');
+            });
+        </script>
     </head>
     <body>
 
