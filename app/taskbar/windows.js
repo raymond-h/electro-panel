@@ -46,10 +46,6 @@ export async function list() {
 
     const list = parseList(out);
 
-    for(const win of list) {
-        win.icon = await icon(win.id);
-    }
-
     return list;
 }
 
@@ -57,14 +53,4 @@ export async function hints(wid) {
     const [out] = await Q.nfcall(exec, `xwininfo -wm -id ${wid}`);
 
     return parse(out, hintsParser);
-}
-
-export async function icon(wid) {
-    console.log(wid);
-
-    const [d] = await Q.nfcall(exec,
-        `xprop -notype 32c _NET_WM_ICON -id ${wid} | cut -c 16- | sed "s/, /\\n/g" | babel-node test.js`
-    );
-
-    return JSON.parse(d);
 }

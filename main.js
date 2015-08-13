@@ -21,8 +21,8 @@ app.on('ready', () => {
 
     mainWindow = new BrowserWindow({
         x: display.workArea.x,
-        width: display.workArea.width, height: 300,
-        frame: true
+        width: display.workArea.width, height: 64,
+        frame: false
     });
 
     mainWindow.loadUrl(`file://${__dirname}/app/index.html`);

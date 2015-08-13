@@ -1,3 +1,34 @@
+body {
+    margin: 0;
+}
+
+.panel {
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+.start-menu-icon {
+    width: 100vh;
+    height: 100vh;
+    background: gray;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.window-list {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+}
+
 .window-icon {
-	
+    padding: 10px;
+    margin: 0 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: black 2px solid;
 }

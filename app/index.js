@@ -1,10 +1,16 @@
 import React from 'react';
 
+import StartMenu from './start-menu';
 import Taskbar from './taskbar';
+import Time from './time';
 
 class Panel extends React.Component {
     render() {
-        return <Taskbar />;
+        return <div className='panel'>
+            <StartMenu />
+            <Taskbar />
+            <Time />
+        </div>;
     }
 }
 
