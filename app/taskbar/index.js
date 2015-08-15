@@ -13,7 +13,7 @@ export default class Taskbar extends React.Component {
     }
 
     async componentDidMount() {
-        const wins = await windows.list();
+        const wins = await windows.listIds();
 
         this.setState({ windows: wins });
     }
@@ -33,20 +33,24 @@ export class TaskbarIcon extends React.Component {
     constructor() {
         super();
 
-        this.state = { imageUri: '' };
+        this.state = { imageUri: '', title: '' };
     }
 
-    async componentDidMount() {
-        const icon = await windows.icon(this.props.window.id);
+    componentDidMount() {
+        windows.icon(this.props.window)
+        .then((icon) => {
+            this.setState({ imageUri: nativeImage.createFromBuffer(icon).toDataUrl() });
+        });
 
-        this.setState({ imageUri: nativeImage.createFromBuffer(icon).toDataUrl() });
+        windows.title(this.props.window)
+        .then((title) => this.setState({ title }));
     }
 
     render() {
         const { window } = this.props;
 
         return <p className='window-icon'>
-            <img className='icon' src={this.state.imageUri} /> {window.title}
+            <img className='icon' src={this.state.imageUri} /> {this.state.title}
         </p>;
     }
 }

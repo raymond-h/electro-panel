@@ -10,82 +10,92 @@ import { createReadStream } from 'streamifier';
 import concat from 'concat-stream';
 
 import _ from 'lodash';
-import { exec } from 'child_process';
-import Parser from 'simple-text-parser';
 import Q from 'q';
 
-const hintsParser = new Parser();
-
-hintsParser.addRule(/displayed on desktop \d+/ig, (match) => {
-    const [full, value] = match.match(/displayed on desktop (\d+)/i);
-    return { type: 'desktopId', value };
-});
-
-hintsParser.addRule(/window type:\n\s+\w+/img, (match) => {
-    const [full, value] = match.match(/window type:\n\s+(\w+)/im);
-    return { type: 'windowType', value };
-});
-
-function parse(txt, parser) {
-    _(txt)
-    .thru((txt) => parser.toTree(txt))
-    .filter((n) => n.type !== 'text')
-    .reduce((acc, curr) => acc[curr.type] = acc.value, {})
-    .value();
-}
-
-function parseList(txt) {
-    const lines =
-        txt
-        .split('\n')
-        .map((line) =>
-            line.match(/^(0x[a-f0-9]+)\s+(\-?\d+)\s+(\S+)\s+(.+)$/)
-        )
-        .filter(_.identity)
-        .map((match) => Array.from(match).slice(1))
-        .map(([id, desktopId, host, title]) => {
-            return { id, desktopId, host, title };
-        });
-
-    return lines;
-}
-
-export async function list() {
-    const [out] = await Q.nfcall(exec, `wmctrl -l`);
-
-    const list = parseList(out);
-
-    return list;
-}
-
-export async function hints(wid) {
-    const [out] = await Q.nfcall(exec, `xwininfo -wm -id ${wid}`);
-
-    return parse(out, hintsParser);
-}
-
-export async function icon(wid) {
+export async function x11Context(fn) {
     const display = await Q.ninvoke(x11, 'createClient');
     const X = display.client;
 
-    const _NET_WM_ICON = await Q.ninvoke(X, 'InternAtom', false, '_NET_WM_ICON');
+    const ret = await fn(display, X);
 
-    const imgs = await new Promise((resolve, reject) => {
-        new x11PropStream.Readable(X, Number(wid), _NET_WM_ICON, X.atoms.CARDINAL)
-            .pipe(new X11IconTransform)
+    await Q.ninvoke(X, 'close');
+
+    return ret;
+}
+
+export async function getProperty(X, wid, name, type) {
+    const tmp = await Q.ninvoke(X, 'GetProperty', 0, wid, name, type, 0, 0);
+
+    if(tmp.type !== type) return null;
+
+    const data = await new Promise((resolve, reject) => {
+        new x11PropStream.Readable(X, wid, name, type)
             .pipe(concat(resolve))
             .on('error', reject);
     });
 
-    const img = _.max(imgs, (img) => img.width * img.height);
+    return data;
+}
 
-    const png = await new Promise((resolve, reject) => {
-        writeToPng(img)
-        .pipe(concat(resolve))
-        .on('error', reject);
+export function listIds() {
+    return x11Context(async (display, X) => {
+        const root = display.screen[0].root;
+
+        const _NET_CLIENT_LIST = await Q.ninvoke(X, 'InternAtom', false, '_NET_CLIENT_LIST');
+        const WINDOW = await Q.ninvoke(X, 'InternAtom', false, 'WINDOW');
+
+        const wins = await getProperty(X, root, _NET_CLIENT_LIST, WINDOW);
+
+        const ids = [];
+        for(let i = 0; i < wins.length; i+=4) {
+            ids.push(wins.readUInt32LE(i));
+        }
+
+        console.log(ids);
+
+        return ids;
     });
+}
 
-    return png;
+export function title(wid) {
+    return x11Context(async (display, X) => {
+        let name = await Q.ninvoke(
+            X, 'GetProperty', 0, wid, X.atoms.WM_NAME, X.atoms.STRING, 0, 1000000
+        );
+
+        if(name.type !== X.atoms.STRING) {
+            const UTF8_STRING = await Q.ninvoke(X, 'InternAtom', false, 'UTF8_STRING');
+
+            name = await Q.ninvoke(
+                X, 'GetProperty', 0, wid, X.atoms.WM_NAME, UTF8_STRING, 0, 1000000
+            );
+        }
+
+        return name.data.toString();
+    });
+}
+
+export function icon(wid) {
+    return x11Context(async (display, X) => {
+        const _NET_WM_ICON = await Q.ninvoke(X, 'InternAtom', false, '_NET_WM_ICON');
+
+        const imgs = await new Promise((resolve, reject) => {
+            new x11PropStream.Readable(X, wid, _NET_WM_ICON, X.atoms.CARDINAL)
+                .pipe(new X11IconTransform)
+                .pipe(concat(resolve))
+                .on('error', reject);
+        });
+
+        const img = _.max(imgs, (img) => img.width * img.height);
+
+        const png = await new Promise((resolve, reject) => {
+            writeToPng(img)
+            .pipe(concat(resolve))
+            .on('error', reject);
+        });
+
+        return png;
+    });
 }
 
 function writeToPng(img) {
